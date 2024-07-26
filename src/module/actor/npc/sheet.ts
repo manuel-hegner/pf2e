@@ -201,7 +201,7 @@ class NPCSheetPF2e extends AbstractNPCSheet {
             const data = this.actor.identificationDCs;
             const skills =
                 data.skills.length > 0
-                    ? localizeList(data.skills.map((s) => game.i18n.localize(CONFIG.PF2E.skillList[s])))
+                    ? localizeList(data.skills.map((s) => game.i18n.localize(CONFIG.PF2E.skills[s].label)))
                     : null;
             return {
                 standard: skills
@@ -373,13 +373,14 @@ class NPCSheetPF2e extends AbstractNPCSheet {
             const traits = item.system.traits.value.map((t) => traitSlugToObject(t, CONFIG.PF2E.actionTraits));
             const glyph = getActionGlyph(item.actionCost);
             const actionGroup = glyph ? "active" : "passive";
+            const frequency = item.system?.frequency || null;
             const has = {
                 aura: item.traits.has("aura") || item.system.rules.some((r) => r.key === "Aura"),
                 deathNote: item.system.deathNote,
                 selfEffect: !!item.system.selfEffect,
             };
 
-            actions[actionGroup].actions.push({ _id: item.id, name: item.name, glyph, traits, has });
+            actions[actionGroup].actions.push({ _id: item.id, name: item.name, glyph, traits, frequency, has });
         }
 
         sheetData.attacks = attacks;

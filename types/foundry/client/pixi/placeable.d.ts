@@ -92,6 +92,8 @@ declare global {
         /** An indicator for whether the object is currently a hover target */
         get hover(): boolean;
 
+        set hover(state: Maybe<boolean>);
+
         /** Is the HUD display active for this Placeable? */
         get hasActiveHUD(): boolean;
 
@@ -396,6 +398,8 @@ declare global {
         extends RenderFlagsContainer<TDocument> {
         hitArea: PIXI.Rectangle;
     }
+
+    type PlaceableShape = PIXI.Circle | PIXI.Ellipse | PIXI.Polygon | PIXI.Rectangle | PIXI.RoundedRectangle;
 }
 
 export class RenderFlagsContainer<TDocument extends CanvasDocument> extends PIXI.Container {

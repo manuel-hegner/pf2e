@@ -5,8 +5,8 @@ import { setHitPointsRollOptions, strikeFromMeleeItem } from "@actor/helpers.ts"
 import { ActorInitiative } from "@actor/initiative.ts";
 import { ModifierPF2e, StatisticModifier } from "@actor/modifiers.ts";
 import type { SaveType } from "@actor/types.ts";
-import { SAVE_TYPES, SKILL_EXPANDED, SKILL_SLUGS } from "@actor/values.ts";
-import type { ItemPF2e, LorePF2e, MeleePF2e } from "@item";
+import { SAVE_TYPES } from "@actor/values.ts";
+import type { ItemPF2e, MeleePF2e } from "@item";
 import type { ItemType } from "@item/base/data/index.ts";
 import { calculateDC } from "@module/dc.ts";
 import { RollNotePF2e } from "@module/notes.ts";
@@ -250,7 +250,7 @@ class NPCPF2e<TParent extends TokenDocumentPF2e | null = TokenDocumentPF2e | nul
         this.prepareSkills();
 
         // Process strikes
-        const syntheticWeapons = R.uniqBy(R.compact(synthetics.strikes.map((s) => s())), (w) => w.slug);
+        const syntheticWeapons = R.uniqueBy(synthetics.strikes.map((s) => s()).filter(R.isTruthy), (w) => w.slug);
         const generatedMelee = syntheticWeapons.flatMap((w) => w.toNPCAttacks({ keepId: true }));
         const meleeItems = R.sortBy(
             [this.itemTypes.melee, generatedMelee].flat(),
@@ -307,13 +307,12 @@ class NPCPF2e<TParent extends TokenDocumentPF2e | null = TokenDocumentPF2e | nul
     private prepareSkills() {
         const modifierAdjustments = this.synthetics.modifierAdjustments;
 
-        this.skills = R.mapToObj([...SKILL_SLUGS], (skillSlug) => {
+        this.skills = R.mapToObj(R.entries.strict(CONFIG.PF2E.skills), ([skillSlug, { attribute, label }]) => {
             const skill = this._source.system.skills[skillSlug];
-            const attribute = SKILL_EXPANDED[skillSlug].attribute;
-            const label = CONFIG.PF2E.skillList[skillSlug] ?? skillSlug;
             const domains = [skillSlug, `${attribute}-based`, "skill-check", `${attribute}-skill-check`, "all"];
 
-            // Get predicated variants as modifiers that trigger when the predicate is met
+            // Get predicated variants as modifiers that trigger when the predicate is met.
+            // This is only necessary if there are predicates. Direct clicking is handled separately.
             const specialModifiers =
                 skill?.special
                     ?.filter((v) => v.predicate?.length)
@@ -351,14 +350,17 @@ class NPCPF2e<TParent extends TokenDocumentPF2e | null = TokenDocumentPF2e | nul
             return [skillSlug, statistic];
         });
 
-        // Lore skills
-        for (const loreItem of this.itemTypes.lore) {
-            // normalize skill name to lower-case and dash-separated words
-            const longForm = sluggify(loreItem.name);
-            const domains = [longForm, "skill-check", "lore-skill-check", "int-skill-check", "all"];
+        // Assemble lore items, key'd by a normalized slug
+        const loreItems = R.mapToObj(this.itemTypes.lore, (loreItem) => {
+            const rawLoreSlug = sluggify(loreItem.name);
+            return [/\blore\b/.test(rawLoreSlug) ? rawLoreSlug : `${rawLoreSlug}-lore`, loreItem];
+        });
 
+        // Add Lore skills to skill statistics
+        for (const [slug, loreItem] of Object.entries(loreItems)) {
+            const domains = [slug, "skill-check", "lore-skill-check", "int-skill-check", "all"];
             const statistic = new Statistic(this, {
-                slug: longForm,
+                slug,
                 label: loreItem.name,
                 attribute: "int",
                 domains,
@@ -367,6 +369,7 @@ class NPCPF2e<TParent extends TokenDocumentPF2e | null = TokenDocumentPF2e | nul
                         slug: "base",
                         label: "PF2E.ModifierTitle",
                         modifier: loreItem.system.mod.value,
+                        adjustments: extractModifierAdjustments(modifierAdjustments, domains, "base"),
                     }),
                 ],
                 lore: true,
@@ -374,19 +377,17 @@ class NPCPF2e<TParent extends TokenDocumentPF2e | null = TokenDocumentPF2e | nul
                 check: { type: "skill-check" },
             });
 
-            this.skills[longForm] = statistic;
+            this.skills[slug] = statistic;
         }
 
-        // Create trace data in system data
-        type GappyLoreItems = Partial<Record<string, LorePF2e<this>>>;
-        const loreItems: GappyLoreItems = R.mapToObj(this.itemTypes.lore, (l) => [sluggify(l.name), l]);
+        // Create trace data in system data and omit unprepared skills
         this.system.skills = R.mapToObj(Object.entries(this.skills), ([key, statistic]) => {
             const loreItem = statistic.lore ? loreItems[statistic.slug] : null;
             const baseData = this.system.skills[key] ?? { base: loreItem?.system.mod.value ?? 0 };
             const data = fu.mergeObject(baseData, {
                 ...statistic.getTraceData(),
                 mod: statistic.check.mod,
-                itemID: loreItem?.id ?? null,
+                itemId: loreItem?.id ?? null,
                 lore: !!statistic.lore,
                 visible: statistic.proficient,
             });

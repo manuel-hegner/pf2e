@@ -1015,7 +1015,26 @@
                     "remaster": true,
                     "title": ""
                 },
-                "rules": [],
+                "rules": [
+                    {
+                        "domain": "all",
+                        "key": "RollOption",
+                        "option": "lunging-bite",
+                        "toggleable": true
+                    },
+                    {
+                        "definition": [
+                            "item:slug:jaws"
+                        ],
+                        "key": "AdjustStrike",
+                        "mode": "add",
+                        "predicate": [
+                            "lunging-bite"
+                        ],
+                        "property": "weapon-traits",
+                        "value": "reach-25"
+                    }
+                ],
                 "slug": null,
                 "traits": {
                     "value": []
@@ -1074,7 +1093,7 @@
             "_id": "hPDNs2tLbZJDWns8",
             "img": "systems/pf2e/icons/default-icons/lore.svg",
             "name": "Illusion Lore",
-            "sort": 2900000,
+            "sort": 2300000,
             "system": {
                 "description": {
                     "value": ""

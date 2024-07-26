@@ -1181,7 +1181,7 @@
                 }
             },
             "img": "systems/pf2e/icons/spells/curse-of-lost-time.webp",
-            "name": "Curse Of Lost Time",
+            "name": "Curse of Lost Time",
             "sort": 1700000,
             "system": {
                 "area": null,
@@ -3236,7 +3236,7 @@
             "_id": "qHtPdbkZjCmSN9kx",
             "img": "systems/pf2e/icons/default-icons/lore.svg",
             "name": "Astronomy Lore",
-            "sort": 5100000,
+            "sort": 5000000,
             "system": {
                 "description": {
                     "value": ""
